@@ -1,285 +1,268 @@
-// components/VisaFreeChart.jsx
-import React, { useState, useRef } from 'react';
+// components/VisaFreeChartAmCharts.jsx
+import React, { useEffect, useRef } from 'react';
+import * as am5 from "@amcharts/amcharts5";
+import * as am5xy from "@amcharts/amcharts5/xy";
+import am5themes_Animated from "@amcharts/amcharts5/themes/Animated";
+import { chartData } from '../Data/Data';
 
-const VisaFreeChart = () => {
-    const [hoveredIndex, setHoveredIndex] = useState(null);
-    const chartContainerRef = useRef(null);
+const VisaFreeChartAmCharts = () => {
+    const chartRef = useRef(null);
 
-    // Sample data for the chart (years 2007-2016)
-    const chartData = [
-        { year: 2007, value: 23.2 },
-        { year: 2008, value: 25.8 },
-        { year: 2009, value: 24.4 },
-        { year: 2010, value: 24.4 },
-        { year: 2011, value: 24.4 },
-        { year: 2012, value: 27.6 },
-        { year: 2013, value: 36.1 },
-        { year: 2014, value: 36.2 },
-        { year: 2015, value: 37.2 },
-        { year: 2016, value: 37.2 }
-    ];
+    useEffect(() => {
+        // Create root element
+        let root = am5.Root.new("chartdiv");
+        root.setThemes([am5themes_Animated.new(root)]);
 
-    // Chart dimensions and calculations
-    const chartHeight = 400;
-    const chartWidth = 900;
-    const margin = { top: 50, right: 50, bottom: 80, left: 50 }; // Increased bottom margin for scrollbar
-    const innerWidth = chartWidth - margin.left - margin.right;
-    const innerHeight = chartHeight - margin.top - margin.bottom;
+        // Create chart
+        let chart = root.container.children.push(
+            am5xy.XYChart.new(root, {
+                panX: true,
+                panY: true,
+                wheelX: "panX",
+                wheelY: "zoomXY",
+                pinchZoomX: true,
+                pinchZoomY: true,
+                cursor: am5xy.XYCursor.new(root, {}),
+                paddingLeft: 0,
+                paddingRight: 0
+            })
+        );
 
-    // Calculate scales
-    const minValue = 0;
-    const maxValue = 100;
+        // Add scrollbars
+        chart.set("scrollbarX", am5.Scrollbar.new(root, {
+            orientation: "horizontal"
+        }));
 
-    // Calculate y positions
-    const getYPosition = (value) => {
-        return innerHeight - ((value - minValue) / (maxValue - minValue)) * innerHeight;
-    };
+        chart.set("scrollbarY", am5.Scrollbar.new(root, {
+            orientation: "vertical"
+        }));
 
-    // Calculate x positions
-    const getXPosition = (index) => {
-        return (innerWidth / (chartData.length - 1)) * index;
-    };
+        // Create axes
+        let xAxis = chart.xAxes.push(
+            am5xy.CategoryAxis.new(root, {
+                renderer: am5xy.AxisRendererX.new(root, {
+                    minGridDistance: 30
+                }),
+                categoryField: "year",
+                tooltip: am5.Tooltip.new(root, {})
+            })
+        );
 
-    const handleMouseMove = (e) => {
-        if (!chartContainerRef.current) return;
+        let yAxis = chart.yAxes.push(
+            am5xy.ValueAxis.new(root, {
+                renderer: am5xy.AxisRendererY.new(root, {}),
+                min: 0,
+                max: 100,
+                strictMinMax: true,
+                extraMin: 0.1,
+                extraMax: 0.1
+            })
+        );
 
-        const rect = chartContainerRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left - margin.left;
+        // Add zoom controls
+        let zoomControl = chart.plotContainer.children.push(
+            am5.Button.new(root, {
+                dx: 10,
+                dy: 10,
+                paddingTop: 5,
+                paddingBottom: 5,
+                paddingLeft: 10,
+                paddingRight: 10,
+                themeTags: ["zoom"]
+            })
+        );
 
-        // Find the closest data point
-        let closestIndex = 0;
-        let minDistance = Infinity;
+        zoomControl.get("background").setAll({
+            fill: am5.color(0xffffff),
+            fillOpacity: 0.8,
+            stroke: am5.color(0xcccccc),
+            strokeWidth: 1
+        });
 
-        chartData.forEach((_, index) => {
-            const dataX = getXPosition(index);
-            const distance = Math.abs(x - dataX);
-            if (distance < minDistance) {
-                minDistance = distance;
-                closestIndex = index;
+        zoomControl.children.push(
+            am5.Label.new(root, {
+                text: "Reset Zoom",
+                fontSize: 12,
+                fill: am5.color(0x666666)
+            })
+        );
+
+        zoomControl.events.on("click", () => {
+            xAxis.zoomToCategories(xAxis.get("start") || 0, xAxis.get("end") || chartData.length - 1);
+            yAxis.zoomToValues(0, 100);
+        });
+
+        // Create series
+        let series = chart.series.push(
+            am5xy.LineSeries.new(root, {
+                name: "Visa-Free Index",
+                xAxis: xAxis,
+                yAxis: yAxis,
+                valueYField: "freedomIndex",
+                categoryXField: "year",
+                tooltip: am5.Tooltip.new(root, {
+                    labelText: "{year}: {valueY}%",
+                    themeTags: ["tooltip"]
+                }),
+                stroke: am5.color(0x67b7dc),
+                fill: am5.color(0x67b7dc)
+            })
+        );
+
+        // Add bullets (data points)
+        series.bullets.push(() => {
+            return am5.Bullet.new(root, {
+                sprite: am5.Circle.new(root, {
+                    radius: 4,
+                    fill: am5.color(0xffffff),
+                    stroke: am5.color(0x67b7dc),
+                    strokeWidth: 2
+                })
+            });
+        });
+
+        // Set data
+        series.data.setAll(chartData);
+        xAxis.data.setAll(chartData);
+
+        // Add cursor
+        let cursor = chart.set("cursor", am5xy.XYCursor.new(root, {
+            behavior: "zoomXY",
+            xAxis: xAxis,
+            yAxis: yAxis
+        }));
+
+        cursor.lineY.set("visible", false);
+        cursor.lineX.set("visible", false);
+
+        // Add zoom in/out buttons
+        let zoomInButton = chart.plotContainer.children.push(
+            am5.Button.new(root, {
+                dx: 10,
+                dy: 40,
+                paddingTop: 5,
+                paddingBottom: 5,
+                paddingLeft: 10,
+                paddingRight: 10,
+                themeTags: ["zoom"]
+            })
+        );
+
+        zoomInButton.get("background").setAll({
+            fill: am5.color(0xffffff),
+            fillOpacity: 0.8,
+            stroke: am5.color(0xcccccc),
+            strokeWidth: 1
+        });
+
+        zoomInButton.children.push(
+            am5.Label.new(root, {
+                text: "+",
+                fontSize: 14,
+                fontWeight: "bold",
+                fill: am5.color(0x666666)
+            })
+        );
+
+        zoomInButton.events.on("click", () => {
+            let yRange = yAxis.getPrivate("end") - yAxis.getPrivate("start");
+            let newRange = yRange * 0.7;
+            let center = (yAxis.getPrivate("end") + yAxis.getPrivate("start")) / 2;
+            let newStart = Math.max(0, center - newRange / 2);
+            let newEnd = Math.min(100, center + newRange / 2);
+            yAxis.zoomToValues(newStart, newEnd);
+        });
+
+        let zoomOutButton = chart.plotContainer.children.push(
+            am5.Button.new(root, {
+                dx: 10,
+                dy: 70,
+                paddingTop: 5,
+                paddingBottom: 5,
+                paddingLeft: 10,
+                paddingRight: 10,
+                themeTags: ["zoom"]
+            })
+        );
+
+        zoomOutButton.get("background").setAll({
+            fill: am5.color(0xffffff),
+            fillOpacity: 0.8,
+            stroke: am5.color(0xcccccc),
+            strokeWidth: 1
+        });
+
+        zoomOutButton.children.push(
+            am5.Label.new(root, {
+                text: "-",
+                fontSize: 14,
+                fontWeight: "bold",
+                fill: am5.color(0x666666)
+            })
+        );
+
+        zoomOutButton.events.on("click", () => {
+            let yRange = yAxis.getPrivate("end") - yAxis.getPrivate("start");
+            let newRange = yRange * 1.3;
+            let center = (yAxis.getPrivate("end") + yAxis.getPrivate("start")) / 2;
+            let newStart = Math.max(0, center - newRange / 2);
+            let newEnd = Math.min(100, center + newRange / 2);
+
+            if (newEnd - newStart >= 100) {
+                yAxis.zoomToValues(0, 100);
+            } else {
+                yAxis.zoomToValues(newStart, newEnd);
             }
         });
 
-        setHoveredIndex(closestIndex);
-    };
+        // Add legend
+        let legend = chart.children.push(
+            am5.Legend.new(root, {
+                nameField: "name",
+                fillField: "fill",
+                strokeField: "stroke",
+                centerX: am5.p50,
+                x: am5.p50,
+                dy: 30
+            })
+        );
 
-    const handleMouseLeave = () => {
-        setHoveredIndex(null);
-    };
+        legend.data.setAll([{
+            name: "Visa-Free Freedom Index",
+            fill: am5.color(0x67b7dc),
+            stroke: am5.color(0x67b7dc)
+        }]);
+
+        // Store references
+        chartRef.current = { root, chart };
+
+        // Cleanup function
+        return () => {
+            if (chartRef.current && chartRef.current.root) {
+                chartRef.current.root.dispose();
+            }
+        };
+    }, []);
 
     return (
         <div className="mt-12">
             <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                Visa-Free Freedom Index over Time
+                Visa-Free Freedom Index over Time (amCharts)
             </h3>
 
             <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
-                {/* Chart Container */}
-                <div className="relative" style={{ height: `${chartHeight}px`, width: '100%' }}>
-                    {/* Y-axis labels */}
-                    <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between"
-                        style={{ width: `${margin.left}px`, height: `${innerHeight}px`, marginTop: `${margin.top}px` }}>
-                        {[100, 90, 80, 70, 60, 50, 40, 30, 20, 10, 0].map((value) => (
-                            <div key={value} className="text-xs text-gray-500 text-right pr-2">
-                                {value}
-                            </div>
-                        ))}
-                    </div>
 
-                    {/* Chart area */}
-                    <div
-                        ref={chartContainerRef}
-                        className="absolute cursor-crosshair"
-                        style={{
-                            left: `${margin.left}px`,
-                            top: `${margin.top}px`,
-                            width: `${innerWidth}px`,
-                            height: `${innerHeight}px`
-                        }}
-                        onMouseMove={handleMouseMove}
-                        onMouseLeave={handleMouseLeave}
-                    >
-                        {/* Horizontal grid lines */}
-                        {[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100].map((value, index) => (
-                            <div
-                                key={value}
-                                className="absolute w-full border-t border-gray-200"
-                                style={{
-                                    top: `${getYPosition(value)}px`,
-                                    height: '1px'
-                                }}
-                            />
-                        ))}
 
-                        {/* Vertical grid lines for years */}
-                        {chartData.map((item, index) => (
-                            <div
-                                key={item.year}
-                                className="absolute h-full border-l border-gray-200"
-                                style={{
-                                    left: `${getXPosition(index)}px`,
-                                    width: '1px'
-                                }}
-                            />
-                        ))}
-
-                        {/* Chart line */}
-                        <svg className="absolute w-full h-full" viewBox={`0 0 ${innerWidth} ${innerHeight}`}>
-                            <path
-                                d={`M ${chartData.map((item, index) =>
-                                    `${getXPosition(index)} ${getYPosition(item.value)}`
-                                ).join(' L ')}`}
-                                fill="none"
-                                stroke="#67b7dc"
-                                strokeWidth="3"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                            />
-
-                            {/* Data points */}
-                            {chartData.map((item, index) => (
-                                <g key={item.year}>
-                                    <circle
-                                        cx={getXPosition(index)}
-                                        cy={getYPosition(item.value)}
-                                        r={hoveredIndex === index ? "6" : "4"}
-                                        fill="white"
-                                        stroke="#67b7dc"
-                                        strokeWidth={hoveredIndex === index ? "3" : "2"}
-                                        className="transition-all duration-150"
-                                    />
-                                    {hoveredIndex === index && (
-                                        <circle
-                                            cx={getXPosition(index)}
-                                            cy={getYPosition(item.value)}
-                                            r="12"
-                                            fill="#67b7dc"
-                                            fillOpacity="0.2"
-                                            className="animate-pulse"
-                                        />
-                                    )}
-                                </g>
-                            ))}
-
-                            {/* Hover vertical line */}
-                            {hoveredIndex !== null && (
-                                <g>
-                                    <line
-                                        x1={getXPosition(hoveredIndex)}
-                                        y1="0"
-                                        x2={getXPosition(hoveredIndex)}
-                                        y2={innerHeight}
-                                        stroke="#258cbb"
-                                        strokeWidth="1"
-                                        strokeDasharray="3,3"
-                                    />
-                                    <line
-                                        x1="0"
-                                        y1={getYPosition(chartData[hoveredIndex].value)}
-                                        x2={innerWidth}
-                                        y2={getYPosition(chartData[hoveredIndex].value)}
-                                        stroke="#258cbb"
-                                        strokeWidth="1"
-                                        strokeDasharray="3,3"
-                                        strokeOpacity="0.2"
-                                    />
-                                </g>
-                            )}
-                        </svg>
-
-                        {/* Hover tooltip */}
-                        {hoveredIndex !== null && (
-                            <div
-                                className="absolute bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10"
-                                style={{
-                                    left: `${getXPosition(hoveredIndex)}px`,
-                                    top: `${getYPosition(chartData[hoveredIndex].value) - 80}px`,
-                                    transform: 'translateX(-50%)',
-                                    minWidth: '140px'
-                                }}
-                            >
-                                <div className="text-center">
-                                    <div className="text-sm font-medium text-gray-500">
-                                        {chartData[hoveredIndex].year}
-                                    </div>
-                                    <div className="text-2xl font-bold text-blue-600">
-                                        {chartData[hoveredIndex].value}%
-                                    </div>
-                                    <div className="text-xs text-gray-400 mt-1">
-                                        Visa-Free Index
-                                    </div>
-                                </div>
-                                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-1/2 rotate-45 w-2 h-2 bg-white border-r border-b border-gray-300"></div>
-                            </div>
-                        )}
-
-                        {/* X-axis labels (years) */}
-                        <div className="absolute bottom-0 left-0 right-0 flex justify-between"
-                            style={{ transform: 'translateY(30px)' }}>
-                            {chartData.map((item, index) => (
-                                <div
-                                    key={item.year}
-                                    className={`text-sm ${hoveredIndex === index ? 'font-bold text-blue-600' : 'text-gray-600'}`}
-                                    style={{
-                                        transform: 'translateX(-50%)',
-                                        left: `${getXPosition(index)}px`,
-                                        position: 'absolute',
-                                        transition: 'all 0.2s'
-                                    }}
-                                >
-                                    {item.year}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* Scrollbar area */}
-                <div className="mt-8 pt-4 border-t border-gray-200">
-                    <div className="relative h-10 bg-gray-100 rounded-lg overflow-hidden">
-                        {/* Scrollbar track */}
-                        <div className="absolute inset-0 bg-gray-200"></div>
-
-                        {/* Scrollbar thumb */}
-                        <div
-                            className="absolute top-0 bottom-0 bg-blue-500 rounded-lg cursor-pointer"
-                            style={{
-                                left: '20%',
-                                right: '20%',
-                                background: 'linear-gradient(to right, #3b82f6, #1d4ed8)'
-                            }}
-                        >
-                            {/* Scrollbar handle icons */}
-                            <div className="absolute left-0 top-1/2 transform -translate-y-1/2 -ml-1">
-                                <div className="w-6 h-6 flex items-center justify-center">
-                                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                </div>
-                            </div>
-                            <div className="absolute right-0 top-1/2 transform -translate-y-1/2 -mr-1">
-                                <div className="w-6 h-6 flex items-center justify-center">
-                                    <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Year markers on scrollbar */}
-                        <div className="absolute inset-0 flex justify-between px-2 items-center">
-                            {chartData.filter((_, index) => index % 2 === 0).map((item) => (
-                                <div key={item.year} className="text-xs text-gray-600 font-medium">
-                                    {item.year}
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Scrollbar instructions */}
-                    <div className="text-xs text-gray-500 text-center mt-2">
-                        Drag to zoom • Use mouse wheel to scroll
-                    </div>
-                </div>
+                {/* Chart container */}
+                <div
+                    id="chartdiv"
+                    style={{
+                        width: "100%",
+                        height: "500px",
+                        backgroundColor: "#ffffff",
+                        borderRadius: "8px"
+                    }}
+                ></div>
 
 
             </div>
@@ -287,4 +270,4 @@ const VisaFreeChart = () => {
     );
 };
 
-export default VisaFreeChart;
+export default VisaFreeChartAmCharts;

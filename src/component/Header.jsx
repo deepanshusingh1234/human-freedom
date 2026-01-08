@@ -1,50 +1,55 @@
-// components/Header.jsx
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import logo from '../assets/Logo-with-Text.png';
 
-export default function Header({ activePage, setActivePage }) {
+export default function Header() {
     const navItems = [
-        { id: 'home', label: 'HOME' },
-        { id: 'about', label: 'ABOUT US' },
-        { id: 'contact', label: 'CONTACT US' },
-        { id: 'blog', label: 'BLOG' },
-        { id: 'faq', label: 'FAQ' }
+        { id: 'home', label: 'HOME', path: '/' },
+        { id: 'about', label: 'ABOUT US', path: '/about' },
+        { id: 'contact', label: 'CONTACT US', path: '/contact' },
+        { id: 'blog', label: 'BLOG', path: '/blog' },
+        { id: 'faq', label: 'FAQ', path: '/faq' }
     ];
 
-    const handleNavClick = (itemId) => {
-        setActivePage(itemId);
-    };
-
     return (
-        <header className="header w-full bg-white shadow-sm ">
+        <header className="header w-full bg-linear-to-b from-gray-50 to-white  ">
             <div className="container mx-auto px-4 py-4">
-                <div className="flex items-center justify-center md:justify-between">
+                <div className="flex flex-col lg:flex-row items-center justify-center lg:space-x-12">
                     <div className="flex items-center space-x-2">
-                        <img
-                            src={logo}
-                            alt="Logo"
-                            className="h-10 w-auto md:h-12"
-                        />
+                        <NavLink to="/">
+                            <img
+                                src={logo}
+                                alt="Logo"
+                                className="h-10 w-auto md:h-18"
+                            />
+                        </NavLink>
                     </div>
 
                     {/* Navigation Menu */}
                     <nav className="hidden md:flex items-center space-x-2">
                         {navItems.map((item) => (
-                            <button
+                            <NavLink
                                 key={item.id}
-                                onClick={() => handleNavClick(item.id)}
-                                className={`relative px-4 py-2 font-medium text-sm transition-all duration-200 ${activePage === item.id
-                                    ? 'text-white'
-                                    : 'text-[#ffcd00] hover:text-[#ffcd00]/80'
-                                    }`}
+                                to={item.path}
+                                className={({ isActive }) =>
+                                    `relative px-4 py-2 font-medium text-sm transition-all duration-200 ${isActive
+                                        ? 'text-white'
+                                        : 'text-[#ffcd00] hover:text-[#ffcd00]/80'
+                                    }`
+                                }
+                                end={item.path === '/'}
                             >
-                                <span className="relative z-10">
-                                    {item.label}
-                                </span>
-                                {activePage === item.id && (
-                                    <span className="absolute inset-0 bg-[#ffcd00] rounded-md shadow-sm transform scale-105"></span>
+                                {({ isActive }) => (
+                                    <>
+                                        <span className="relative z-10">
+                                            {item.label}
+                                        </span>
+                                        {isActive && (
+                                            <span className="absolute inset-0 bg-[#ffcd00] rounded-md shadow-sm transform scale-105"></span>
+                                        )}
+                                    </>
                                 )}
-                            </button>
+                            </NavLink>
                         ))}
                     </nav>
                 </div>

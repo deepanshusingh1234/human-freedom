@@ -1,42 +1,34 @@
-import React, { useState } from 'react';
-
-
-import './App.css'
-import Header from './component/Header'
-import HomeContent from './component/HomeContent'
-import AboutPage from './component/About'
-import ContactPage from './component/Contact'
-import BlogPage from './component/Blog'
-import FAQPage from './component/Faq'
-import Footer from './component/Footer'
-
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import './App.css';
+import './index.css';
+import Header from './component/Header';
+import HomeContent from './component/HomeContent';
+import AboutPage from './component/About';
+import ContactPage from './component/Contact';
+import BlogPage from './component/Blog';
+import FAQPage from './component/Faq';
+import Footer from './component/Footer';
+import CountryDetail from './component/CountryDetail';
 
 function App() {
-  const [activePage, setActivePage] = useState('home');
-
-  const renderPage = () => {
-    switch (activePage) {
-      case 'home':
-        return <HomeContent />;
-      case 'about':
-        return <AboutPage />;
-      case 'contact':
-        return <ContactPage />;
-      case 'blog':
-        return <BlogPage />;
-      case 'faq':
-        return <FAQPage />;
-      default:
-        return <HomeContent />;
-    }
-  };
-
   return (
+
     <div className="App">
-      <Header activePage={activePage} setActivePage={setActivePage} />
-      {renderPage()}
+      <Header />
+      <main>
+        <Routes>
+          <Route path="/" element={<HomeContent />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/faq" element={<FAQPage />} />
+          <Route path="/country/:countryId" element={<CountryDetail />} />
+        </Routes>
+      </main>
       <Footer />
     </div>
+
   );
 }
 
