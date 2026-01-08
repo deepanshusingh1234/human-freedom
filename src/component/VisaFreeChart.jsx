@@ -24,11 +24,12 @@ const VisaFreeChartAmCharts = () => {
                 pinchZoomY: true,
                 cursor: am5xy.XYCursor.new(root, {}),
                 paddingLeft: 0,
-                paddingRight: 0
+                paddingRight: 0,
+                paddingBottom: 40 // For scrollbar
             })
         );
 
-        // Add scrollbars
+        // Add scrollbars (KEEPING THESE AS REQUESTED)
         chart.set("scrollbarX", am5.Scrollbar.new(root, {
             orientation: "horizontal"
         }));
@@ -59,38 +60,7 @@ const VisaFreeChartAmCharts = () => {
             })
         );
 
-        // Add zoom controls
-        let zoomControl = chart.plotContainer.children.push(
-            am5.Button.new(root, {
-                dx: 10,
-                dy: 10,
-                paddingTop: 5,
-                paddingBottom: 5,
-                paddingLeft: 10,
-                paddingRight: 10,
-                themeTags: ["zoom"]
-            })
-        );
-
-        zoomControl.get("background").setAll({
-            fill: am5.color(0xffffff),
-            fillOpacity: 0.8,
-            stroke: am5.color(0xcccccc),
-            strokeWidth: 1
-        });
-
-        zoomControl.children.push(
-            am5.Label.new(root, {
-                text: "Reset Zoom",
-                fontSize: 12,
-                fill: am5.color(0x666666)
-            })
-        );
-
-        zoomControl.events.on("click", () => {
-            xAxis.zoomToCategories(xAxis.get("start") || 0, xAxis.get("end") || chartData.length - 1);
-            yAxis.zoomToValues(0, 100);
-        });
+        // REMOVED: Zoom control button (reset zoom button)
 
         // Create series
         let series = chart.series.push(
@@ -135,84 +105,13 @@ const VisaFreeChartAmCharts = () => {
         cursor.lineY.set("visible", false);
         cursor.lineX.set("visible", false);
 
-        // Add zoom in/out buttons
-        let zoomInButton = chart.plotContainer.children.push(
-            am5.Button.new(root, {
-                dx: 10,
-                dy: 40,
-                paddingTop: 5,
-                paddingBottom: 5,
-                paddingLeft: 10,
-                paddingRight: 10,
-                themeTags: ["zoom"]
-            })
-        );
+        // REMOVED: Zoom in button (+)
+        // REMOVED: Zoom out button (-)
 
-        zoomInButton.get("background").setAll({
-            fill: am5.color(0xffffff),
-            fillOpacity: 0.8,
-            stroke: am5.color(0xcccccc),
-            strokeWidth: 1
-        });
-
-        zoomInButton.children.push(
-            am5.Label.new(root, {
-                text: "+",
-                fontSize: 14,
-                fontWeight: "bold",
-                fill: am5.color(0x666666)
-            })
-        );
-
-        zoomInButton.events.on("click", () => {
-            let yRange = yAxis.getPrivate("end") - yAxis.getPrivate("start");
-            let newRange = yRange * 0.7;
-            let center = (yAxis.getPrivate("end") + yAxis.getPrivate("start")) / 2;
-            let newStart = Math.max(0, center - newRange / 2);
-            let newEnd = Math.min(100, center + newRange / 2);
-            yAxis.zoomToValues(newStart, newEnd);
-        });
-
-        let zoomOutButton = chart.plotContainer.children.push(
-            am5.Button.new(root, {
-                dx: 10,
-                dy: 70,
-                paddingTop: 5,
-                paddingBottom: 5,
-                paddingLeft: 10,
-                paddingRight: 10,
-                themeTags: ["zoom"]
-            })
-        );
-
-        zoomOutButton.get("background").setAll({
-            fill: am5.color(0xffffff),
-            fillOpacity: 0.8,
-            stroke: am5.color(0xcccccc),
-            strokeWidth: 1
-        });
-
-        zoomOutButton.children.push(
-            am5.Label.new(root, {
-                text: "-",
-                fontSize: 14,
-                fontWeight: "bold",
-                fill: am5.color(0x666666)
-            })
-        );
-
-        zoomOutButton.events.on("click", () => {
-            let yRange = yAxis.getPrivate("end") - yAxis.getPrivate("start");
-            let newRange = yRange * 1.3;
-            let center = (yAxis.getPrivate("end") + yAxis.getPrivate("start")) / 2;
-            let newStart = Math.max(0, center - newRange / 2);
-            let newEnd = Math.min(100, center + newRange / 2);
-
-            if (newEnd - newStart >= 100) {
-                yAxis.zoomToValues(0, 100);
-            } else {
-                yAxis.zoomToValues(newStart, newEnd);
-            }
+        // Double click to reset zoom (alternative to removed button)
+        chart.plotContainer.events.on("dblclick", () => {
+            xAxis.zoomToCategories(xAxis.get("start") || 0, xAxis.get("end") || chartData.length - 1);
+            yAxis.zoomToValues(0, 100);
         });
 
         // Add legend
@@ -233,11 +132,22 @@ const VisaFreeChartAmCharts = () => {
             stroke: am5.color(0x67b7dc)
         }]);
 
+        // Make chart responsive
+        const handleResize = () => {
+            if (chartRef.current && chartRef.current.root) {
+                chartRef.current.root.resize();
+            }
+        };
+
+        // Add resize listener
+        window.addEventListener('resize', handleResize);
+
         // Store references
         chartRef.current = { root, chart };
 
         // Cleanup function
         return () => {
+            window.removeEventListener('resize', handleResize);
             if (chartRef.current && chartRef.current.root) {
                 chartRef.current.root.dispose();
             }
@@ -245,24 +155,28 @@ const VisaFreeChartAmCharts = () => {
     }, []);
 
     return (
-        <div className="mt-12">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-                Visa-Free Freedom Index over Time (amCharts)
+        <div className="mt-8 md:mt-12 px-2 md:px-0">
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 text-center">
+                Visa-Free Freedom Index over Time
             </h3>
 
-            <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
+            <div className="bg-white rounded-lg md:rounded-xl shadow-sm md:shadow-md border border-gray-200 p-3 md:p-6">
 
 
-                {/* Chart container */}
-                <div
-                    id="chartdiv"
-                    style={{
-                        width: "100%",
-                        height: "500px",
-                        backgroundColor: "#ffffff",
-                        borderRadius: "8px"
-                    }}
-                ></div>
+                {/* Chart container with responsive height */}
+                <div className="relative">
+                    <div
+                        id="chartdiv"
+                        style={{
+                            width: "100%",
+                            height: "450px",
+                            minHeight: "300px",
+                            backgroundColor: "#ffffff",
+                            borderRadius: "8px"
+                        }}
+                        className="md:h-[450px] lg:h-[450px]"
+                    ></div>
+                </div>
 
 
             </div>
