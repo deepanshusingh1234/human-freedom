@@ -21,6 +21,18 @@ export default function HomeContent() {
     const [currentYearData, setCurrentYearData] = useState([]);
     const [availableYears, setAvailableYears] = useState([]);
 
+    // Sorting states for left table
+    const [sortConfigLeft, setSortConfigLeft] = useState({
+        key: 'rank',
+        direction: 'asc'
+    });
+
+    // Sorting states for right table
+    const [sortConfigRight, setSortConfigRight] = useState({
+        key: 'rank',
+        direction: 'asc'
+    });
+
     // Extract available years and set initial data
     useEffect(() => {
         // Determine the structure of your data
@@ -55,60 +67,160 @@ export default function HomeContent() {
         setAvailableYears(years);
         setCurrentYearData(initialData);
 
-        // Reset pagination and search when year changes
+        // Reset pagination, search and sorting when year changes
         setCurrentPageLeft(1);
         setCurrentPageRight(1);
         setSearchTermLeft('');
         setSearchTermRight('');
+        setSortConfigLeft({ key: 'rank', direction: 'asc' });
+        setSortConfigRight({ key: 'rank', direction: 'asc' });
     }, [selectedYear]);
 
-    // Filtered data based on search
-    const [filteredDataLeft, setFilteredDataLeft] = useState(currentYearData);
-    const [filteredDataRight, setFilteredDataRight] = useState(currentYearData);
+    // Function to sort data
+    const sortData = (data, sortConfig) => {
+        if (!data.length || !sortConfig.key) return data;
 
-    // Update filtered data when search term or year data changes
+        return [...data].sort((a, b) => {
+            let aValue = a[sortConfig.key];
+            let bValue = b[sortConfig.key];
+
+            // Handle numeric values (population, rank, indices)
+            if (['rank', 'population', 'freedomIndex', 'welcomeIndex'].includes(sortConfig.key)) {
+                // Extract numeric values from strings like "2.1 %"
+                if (typeof aValue === 'string' && aValue.includes(' ')) {
+                    aValue = parseFloat(aValue.split(' ')[0]) || 0;
+                    bValue = parseFloat(bValue.split(' ')[0]) || 0;
+                } else {
+                    aValue = parseFloat(aValue) || 0;
+                    bValue = parseFloat(bValue) || 0;
+                }
+            }
+
+            // Handle string comparison for country name and code
+            if (typeof aValue === 'string' && typeof bValue === 'string') {
+                aValue = aValue.toLowerCase();
+                bValue = bValue.toLowerCase();
+            }
+
+            if (aValue < bValue) {
+                return sortConfig.direction === 'asc' ? -1 : 1;
+            }
+            if (aValue > bValue) {
+                return sortConfig.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+    };
+
+    // Function to handle sort for left table
+    const handleSortLeft = (key) => {
+        setSortConfigLeft(prevConfig => ({
+            key,
+            direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+        }));
+        setCurrentPageLeft(1); // Reset to first page when sorting changes
+    };
+
+    // Function to handle sort for right table
+    const handleSortRight = (key) => {
+        setSortConfigRight(prevConfig => ({
+            key,
+            direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+        }));
+        setCurrentPageRight(1); // Reset to first page when sorting changes
+    };
+
+    // Sort icon component
+    const SortIcon = ({ columnKey, sortConfig }) => {
+        if (sortConfig.key !== columnKey) {
+            return (
+                <span className="ml-1 opacity-30">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                </span>
+            );
+        }
+
+        return (
+            <span className="ml-1">
+                {sortConfig.direction === 'asc' ? (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                ) : (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                )}
+            </span>
+        );
+    };
+
+    // Filtered and sorted data for left table
+    const [filteredDataLeft, setFilteredDataLeft] = useState([]);
+    const [sortedDataLeft, setSortedDataLeft] = useState([]);
+
+    // Filtered and sorted data for right table
+    const [filteredDataRight, setFilteredDataRight] = useState([]);
+    const [sortedDataRight, setSortedDataRight] = useState([]);
+
+    // Update filtered and sorted data for left table
     useEffect(() => {
         if (currentYearData.length > 0) {
-            const filteredLeft = currentYearData.filter(item =>
+            const filtered = currentYearData.filter(item =>
                 item.country.toLowerCase().includes(searchTermLeft.toLowerCase()) ||
                 (item.code && item.code.toLowerCase().includes(searchTermLeft.toLowerCase()))
             );
-            setFilteredDataLeft(filteredLeft);
-            setCurrentPageLeft(1); // Reset to first page when search changes
+            setFilteredDataLeft(filtered);
+
+            // Sort the filtered data
+            const sorted = sortData(filtered, sortConfigLeft);
+            setSortedDataLeft(sorted);
+
+            setCurrentPageLeft(1);
         } else {
             setFilteredDataLeft([]);
+            setSortedDataLeft([]);
         }
-    }, [searchTermLeft, currentYearData]);
+    }, [searchTermLeft, currentYearData, sortConfigLeft]);
 
+    // Update filtered and sorted data for right table
     useEffect(() => {
         if (currentYearData.length > 0) {
-            const filteredRight = currentYearData.filter(item =>
+            const filtered = currentYearData.filter(item =>
                 item.country.toLowerCase().includes(searchTermRight.toLowerCase()) ||
                 (item.code && item.code.toLowerCase().includes(searchTermRight.toLowerCase()))
             );
-            setFilteredDataRight(filteredRight);
-            setCurrentPageRight(1); // Reset to first page when search changes
+            setFilteredDataRight(filtered);
+
+            // Sort the filtered data
+            const sorted = sortData(filtered, sortConfigRight);
+            setSortedDataRight(sorted);
+
+            setCurrentPageRight(1);
         } else {
             setFilteredDataRight([]);
+            setSortedDataRight([]);
         }
-    }, [searchTermRight, currentYearData]);
+    }, [searchTermRight, currentYearData, sortConfigRight]);
 
     // Calculate pagination for left table
     const indexOfLastEntryLeft = currentPageLeft * entriesPerPage;
     const indexOfFirstEntryLeft = indexOfLastEntryLeft - entriesPerPage;
-    const currentEntriesLeft = filteredDataLeft.slice(indexOfFirstEntryLeft, indexOfLastEntryLeft);
-    const totalPagesLeft = Math.ceil(filteredDataLeft.length / entriesPerPage);
+    const currentEntriesLeft = sortedDataLeft.slice(indexOfFirstEntryLeft, indexOfLastEntryLeft);
+    const totalPagesLeft = Math.ceil(sortedDataLeft.length / entriesPerPage);
 
     // Calculate pagination for right table
     const indexOfLastEntryRight = currentPageRight * entriesPerPage;
     const indexOfFirstEntryRight = indexOfLastEntryRight - entriesPerPage;
-    const currentEntriesRight = filteredDataRight.slice(indexOfFirstEntryRight, indexOfLastEntryRight);
-    const totalPagesRight = Math.ceil(filteredDataRight.length / entriesPerPage);
+    const currentEntriesRight = sortedDataRight.slice(indexOfFirstEntryRight, indexOfLastEntryRight);
+    const totalPagesRight = Math.ceil(sortedDataRight.length / entriesPerPage);
 
     // Function to handle country click
     const handleCountryClick = (countryName) => {
         const countryId = countryName.toLowerCase().replace(/\s+/g, '-');
-        navigate(`/country/${countryId}`);
+        navigate(`/country/${countryId}?year=${selectedYear}`);
     };
 
     // Handle year change
@@ -118,23 +230,12 @@ export default function HomeContent() {
 
     // Get visa-free freedom index for selected year from actual data
     const getVisaFreeFreedomIndex = () => {
-        // Check if we have data for the selected year
         if (currentYearData.length === 0) {
             return "N/A";
         }
 
-        // You should calculate this based on your actual data
-        // This is a placeholder - you need to implement the actual calculation
-        // For example, if you have a property called "freedomIndex" in your data:
-
-        // Option 1: If you have a pre-calculated value for each year
-        // You might need to add this to your data structure
-
-        // Option 2: Calculate from the data
-        // Example: Average of all freedomIndex values for the year
         try {
             const total = currentYearData.reduce((sum, item) => {
-                // Extract numeric value from string like "2.1 %"
                 const value = parseFloat(item.freedomIndex) || 0;
                 return sum + value;
             }, 0);
@@ -147,7 +248,7 @@ export default function HomeContent() {
         }
     };
 
-    // Pagination component (same as before)
+    // Pagination component
     const Pagination = ({ currentPage, totalPages, onPageChange, totalEntries, entriesPerPage, indexOfFirstEntry, indexOfLastEntry }) => {
         const pages = [];
 
@@ -284,17 +385,6 @@ export default function HomeContent() {
                     </div>
                 </div>
 
-                {/* Year Display */}
-                {/* <div className="text-center mb-8">
-                    <div className="inline-block bg-[#ffdc4d] text-black px-6 py-2 rounded-full font-semibold">
-                        {currentYearData.length > 0 ? (
-                            `Showing Data for ${selectedYear} (${currentYearData.length} countries)`
-                        ) : (
-                            `No data available for ${selectedYear}`
-                        )}
-                    </div>
-                </div> */}
-
                 {/* Two Tables Section - Only show if we have data */}
                 {currentYearData.length > 0 ? (
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -338,20 +428,50 @@ export default function HomeContent() {
                                     <table className="min-w-full divide-y divide-gray-200">
                                         <thead className="bg-[#ffdc4d]">
                                             <tr>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                    Ranking
+                                                <th
+                                                    className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                    onClick={() => handleSortLeft('rank')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Ranking
+                                                        <SortIcon columnKey="rank" sortConfig={sortConfigLeft} />
+                                                    </div>
                                                 </th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                    Country Name
+                                                <th
+                                                    className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                    onClick={() => handleSortLeft('country')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Country Name
+                                                        <SortIcon columnKey="country" sortConfig={sortConfigLeft} />
+                                                    </div>
                                                 </th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                    Country Code
+                                                <th
+                                                    className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                    onClick={() => handleSortLeft('code')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Country Code
+                                                        <SortIcon columnKey="code" sortConfig={sortConfigLeft} />
+                                                    </div>
                                                 </th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                    Population (Millions)
+                                                <th
+                                                    className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                    onClick={() => handleSortLeft('population')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Population (Millions)
+                                                        <SortIcon columnKey="population" sortConfig={sortConfigLeft} />
+                                                    </div>
                                                 </th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                    Visa-Free Travel Index
+                                                <th
+                                                    className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                    onClick={() => handleSortLeft('freedomIndex')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Visa-Free Travel Index
+                                                        <SortIcon columnKey="freedomIndex" sortConfig={sortConfigLeft} />
+                                                    </div>
                                                 </th>
                                             </tr>
                                         </thead>
@@ -395,12 +515,12 @@ export default function HomeContent() {
                                 </div>
 
                                 {/* Pagination for Left Table */}
-                                {filteredDataLeft.length > 0 && (
+                                {sortedDataLeft.length > 0 && (
                                     <Pagination
                                         currentPage={currentPageLeft}
                                         totalPages={totalPagesLeft}
                                         onPageChange={setCurrentPageLeft}
-                                        totalEntries={filteredDataLeft.length}
+                                        totalEntries={sortedDataLeft.length}
                                         entriesPerPage={entriesPerPage}
                                         indexOfFirstEntry={indexOfFirstEntryLeft}
                                         indexOfLastEntry={indexOfLastEntryLeft}
@@ -449,20 +569,50 @@ export default function HomeContent() {
                                     <table className="min-w-full divide-y divide-gray-200">
                                         <thead className="bg-[#ffdc4d]">
                                             <tr>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                    Ranking
+                                                <th
+                                                    className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                    onClick={() => handleSortRight('rank')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Ranking
+                                                        <SortIcon columnKey="rank" sortConfig={sortConfigRight} />
+                                                    </div>
                                                 </th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                    Country Name
+                                                <th
+                                                    className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                    onClick={() => handleSortRight('country')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Country Name
+                                                        <SortIcon columnKey="country" sortConfig={sortConfigRight} />
+                                                    </div>
                                                 </th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                    Country Code
+                                                <th
+                                                    className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                    onClick={() => handleSortRight('code')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Country Code
+                                                        <SortIcon columnKey="code" sortConfig={sortConfigRight} />
+                                                    </div>
                                                 </th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                    Population (Millions)
+                                                <th
+                                                    className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                    onClick={() => handleSortRight('population')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Population (Millions)
+                                                        <SortIcon columnKey="population" sortConfig={sortConfigRight} />
+                                                    </div>
                                                 </th>
-                                                <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                    Visa-Free Welcome Index
+                                                <th
+                                                    className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                    onClick={() => handleSortRight('welcomeIndex')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Visa-Free Welcome Index
+                                                        <SortIcon columnKey="welcomeIndex" sortConfig={sortConfigRight} />
+                                                    </div>
                                                 </th>
                                             </tr>
                                         </thead>
@@ -506,12 +656,12 @@ export default function HomeContent() {
                                 </div>
 
                                 {/* Pagination for Right Table */}
-                                {filteredDataRight.length > 0 && (
+                                {sortedDataRight.length > 0 && (
                                     <Pagination
                                         currentPage={currentPageRight}
                                         totalPages={totalPagesRight}
                                         onPageChange={setCurrentPageRight}
-                                        totalEntries={filteredDataRight.length}
+                                        totalEntries={sortedDataRight.length}
                                         entriesPerPage={entriesPerPage}
                                         indexOfFirstEntry={indexOfFirstEntryRight}
                                         indexOfLastEntry={indexOfLastEntryRight}

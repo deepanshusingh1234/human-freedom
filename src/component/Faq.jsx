@@ -55,8 +55,8 @@ export default function Faq() {
         <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white py-12 px-4 sm:px-6 lg:px-8">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                <div className="text-center mb-12 ">
+                    <h1 className="text-4xl font-bold  text-gray-900 mb-4">
                         Frequently Asked Questions
                     </h1>
                     <p className="text-lg text-gray-600 max-w-3xl mx-auto">
@@ -140,9 +140,9 @@ export default function Faq() {
                 </div>
 
                 {/* Help Section */}
-                <div className="max-w-4xl mx-auto mt-16 p-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100">
+                <div className="max-w-4xl mx-auto mt-16 p-8 bg-[#fffae6] rounded-2xl border border-blue-100">
                     <div className="text-center">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <div className="w-16 h-16 bg-gradient-to-r from-[#b39000] to-[#ffdc4d] rounded-full flex items-center justify-center mx-auto mb-6">
                             <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
                             </svg>
@@ -154,12 +154,10 @@ export default function Faq() {
                             Can't find the answer you're looking for? Our support team is here to help you with any additional questions.
                         </p>
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                            <button className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1">
+                            <button className="px-8 py-3 bg-gradient-to-r from-[#b39000] to-[#ffdc4d] text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-1">
                                 Contact Support
                             </button>
-                            <button className="px-8 py-3 bg-white text-blue-600 font-semibold rounded-xl border-2 border-blue-200 hover:bg-blue-50 transition-all duration-300 shadow-sm">
-                                View Documentation
-                            </button>
+
                         </div>
                     </div>
                 </div>

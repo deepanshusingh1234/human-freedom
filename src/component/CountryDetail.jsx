@@ -1,9 +1,11 @@
+// CountryDetail.jsx
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 import { visaFreeCountries } from '../Data/Data';
 
 const CountryDetail = () => {
     const { countryId } = useParams();
+    const location = useLocation();
     const [loading, setLoading] = useState(true);
     const [countryData, setCountryData] = useState(null);
     const [viewMode, setViewMode] = useState('citizens'); // 'citizens' or 'visitors'
@@ -13,26 +15,133 @@ const CountryDetail = () => {
     const [searchTermLeft, setSearchTermLeft] = useState('');
     const [searchTermRight, setSearchTermRight] = useState('');
 
+    const queryParams = new URLSearchParams(location.search);
+    const yearParam = queryParams.get('year');
+    const selectedYear = yearParam ? parseInt(yearParam) : 2006;
+
+    // Sorting states for left table
+    const [sortConfigLeft, setSortConfigLeft] = useState({
+        key: 'country',
+        direction: 'asc'
+    });
+
+    // Sorting states for right table
+    const [sortConfigRight, setSortConfigRight] = useState({
+        key: 'country',
+        direction: 'asc'
+    });
+
     useEffect(() => {
+        setLoading(true);
+
         // Simulate loading
         setTimeout(() => {
-            // Assuming you want data for the first year in your array
-            // You might want to make the year dynamic based on user selection
-            const yearData = visaFreeCountries[0]; // Get first year data
+            // Find the data for the selected year
+            const yearData = visaFreeCountries.find(y => y.year === selectedYear);
 
-            // Get the country key from URL parameter
+            if (!yearData) {
+                console.error('Year data not found:', selectedYear);
+                setLoading(false);
+                return;
+            }
+
             const countryKey = countryId.toLowerCase();
 
-            // Check if the country exists in the countries object
             if (yearData.countries && yearData.countries[countryKey]) {
                 setCountryData(yearData.countries[countryKey]);
             } else {
-                // Handle case when country is not found
-                console.error('Country not found:', countryKey);
+                console.error('Country not found:', countryKey, 'in year', selectedYear);
             }
             setLoading(false);
         }, 500);
-    }, [countryId]);
+    }, [countryId, selectedYear]); // Add selectedYear to dependency array
+
+    // Sort icon component
+    const SortIcon = ({ columnKey, sortConfig }) => {
+        if (sortConfig.key !== columnKey) {
+            return (
+                <span className="ml-1 opacity-30">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+                    </svg>
+                </span>
+            );
+        }
+
+        return (
+            <span className="ml-1">
+                {sortConfig.direction === 'asc' ? (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                    </svg>
+                ) : (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                )}
+            </span>
+        );
+    };
+
+    // Function to sort data
+    const sortData = (data, sortConfig) => {
+        if (!data.length || !sortConfig.key) return data;
+
+        return [...data].sort((a, b) => {
+            let aValue = a[sortConfig.key];
+            let bValue = b[sortConfig.key];
+
+            // Handle numeric values (population)
+            if (sortConfig.key === 'population') {
+                aValue = parseFloat(aValue) || 0;
+                bValue = parseFloat(bValue) || 0;
+            }
+            // Handle calculated percentage
+            else if (sortConfig.key === 'percentage') {
+                aValue = parseFloat(calculatePercentage(a.population).replace('%', '')) || 0;
+                bValue = parseFloat(calculatePercentage(b.population).replace('%', '')) || 0;
+            }
+            // Handle string comparison for country name
+            else if (typeof aValue === 'string' && typeof bValue === 'string') {
+                aValue = aValue.toLowerCase();
+                bValue = bValue.toLowerCase();
+            }
+
+            if (aValue < bValue) {
+                return sortConfig.direction === 'asc' ? -1 : 1;
+            }
+            if (aValue > bValue) {
+                return sortConfig.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+    };
+
+    // Function to handle sort for left table
+    const handleSortLeft = (key) => {
+        setSortConfigLeft(prevConfig => ({
+            key,
+            direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+        }));
+        setCurrentPageLeft(1);
+    };
+
+    // Function to handle sort for right table
+    const handleSortRight = (key) => {
+        setSortConfigRight(prevConfig => ({
+            key,
+            direction: prevConfig.key === key && prevConfig.direction === 'asc' ? 'desc' : 'asc'
+        }));
+        setCurrentPageRight(1);
+    };
+
+    // Calculate percentage for each country
+    const calculatePercentage = (countryPopulation) => {
+        const worldPopulation = 8000; // Example: 8 billion total world population
+        const populationValue = parseFloat(countryPopulation);
+        const percentage = ((populationValue / worldPopulation) * 100).toFixed(2);
+        return `${percentage}%`;
+    };
 
     // Calculate total entries based on current view mode
     const getTotalEntries = () => {
@@ -67,12 +176,22 @@ const CountryDetail = () => {
         setViewMode('citizens');
         setCurrentPageLeft(1);
         setCurrentPageRight(1);
+        // Reset sorting to default when switching view mode
+        setSortConfigLeft({ key: 'country', direction: 'asc' });
+        setSortConfigRight({ key: 'country', direction: 'asc' });
+        setSearchTermLeft('');
+        setSearchTermRight('');
     };
 
     const handleWelcomeIndexClick = () => {
         setViewMode('visitors');
         setCurrentPageLeft(1);
         setCurrentPageRight(1);
+        // Reset sorting to default when switching view mode
+        setSortConfigLeft({ key: 'country', direction: 'asc' });
+        setSortConfigRight({ key: 'country', direction: 'asc' });
+        setSearchTermLeft('');
+        setSearchTermRight('');
     };
 
     const getTableTitles = () => {
@@ -111,36 +230,30 @@ const CountryDetail = () => {
         );
     };
 
-    // Paginate data
+    const { leftTitle, rightTitle } = getTableTitles();
+    const { leftData, rightData } = getTableData();
+
+    // Filter and sort data for left table
+    const filteredLeftData = filterData(leftData, searchTermLeft);
+    const sortedLeftData = sortData(filteredLeftData, sortConfigLeft);
+
+    // Filter and sort data for right table
+    const filteredRightData = filterData(rightData, searchTermRight);
+    const sortedRightData = sortData(filteredRightData, sortConfigRight);
+
+    // Paginate sorted data
     const paginateData = (data, currentPage) => {
         const startIndex = (currentPage - 1) * entriesPerPage;
         const endIndex = startIndex + entriesPerPage;
         return data.slice(startIndex, endIndex);
     };
 
-    const { leftTitle, rightTitle } = getTableTitles();
-    const { leftData, rightData } = getTableData();
-
-    // Filter and paginate data
-    const filteredLeftData = filterData(leftData, searchTermLeft);
-    const filteredRightData = filterData(rightData, searchTermRight);
-
-    const paginatedLeftData = paginateData(filteredLeftData, currentPageLeft);
-    const paginatedRightData = paginateData(filteredRightData, currentPageRight);
+    const paginatedLeftData = paginateData(sortedLeftData, currentPageLeft);
+    const paginatedRightData = paginateData(sortedRightData, currentPageRight);
 
     // Calculate total pages for each table
-    const totalPagesLeft = Math.ceil(filteredLeftData.length / entriesPerPage);
-    const totalPagesRight = Math.ceil(filteredRightData.length / entriesPerPage);
-
-    // Calculate percentage for each country (example calculation)
-    const calculatePercentage = (countryPopulation) => {
-        // You need total world population for accurate calculation
-        // For now, returning a placeholder or calculated value
-        const worldPopulation = 8000; // Example: 8 billion total world population
-        const populationValue = parseFloat(countryPopulation);
-        const percentage = ((populationValue / worldPopulation) * 100).toFixed(2);
-        return `${percentage}%`;
-    };
+    const totalPagesLeft = Math.ceil(sortedLeftData.length / entriesPerPage);
+    const totalPagesRight = Math.ceil(sortedRightData.length / entriesPerPage);
 
     // Pagination component
     const Pagination = ({ currentPage, totalPages, onPageChange, totalEntries }) => {
@@ -255,7 +368,6 @@ const CountryDetail = () => {
                                         </div>
                                         <div className="text-left">
                                             <h3 className="text-lg md:text-xl font-semibold text-gray-700">Visa-Free Travel Index</h3>
-
                                         </div>
                                     </div>
                                 </div>
@@ -278,7 +390,6 @@ const CountryDetail = () => {
                                         </div>
                                         <div className="text-left">
                                             <h3 className="text-lg md:text-xl font-semibold text-gray-700">Visa-Free Welcome Index</h3>
-
                                         </div>
                                     </div>
                                 </div>
@@ -339,14 +450,32 @@ const CountryDetail = () => {
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-[#ffdc4d]">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                Country
+                                            <th
+                                                className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                onClick={() => handleSortLeft('country')}
+                                            >
+                                                <div className="flex items-center">
+                                                    Country
+                                                    <SortIcon columnKey="country" sortConfig={sortConfigLeft} />
+                                                </div>
                                             </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                Population (Millions)
+                                            <th
+                                                className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                onClick={() => handleSortLeft('population')}
+                                            >
+                                                <div className="flex items-center">
+                                                    Population (Millions)
+                                                    <SortIcon columnKey="population" sortConfig={sortConfigLeft} />
+                                                </div>
                                             </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                Percentage of World Population
+                                            <th
+                                                className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                onClick={() => handleSortLeft('percentage')}
+                                            >
+                                                <div className="flex items-center">
+                                                    Percentage of World Population
+                                                    <SortIcon columnKey="percentage" sortConfig={sortConfigLeft} />
+                                                </div>
                                             </th>
                                         </tr>
                                     </thead>
@@ -381,7 +510,7 @@ const CountryDetail = () => {
                                 currentPage={currentPageLeft}
                                 totalPages={totalPagesLeft}
                                 onPageChange={setCurrentPageLeft}
-                                totalEntries={filteredLeftData.length}
+                                totalEntries={sortedLeftData.length}
                             />
                         </div>
                     </div>
@@ -434,14 +563,32 @@ const CountryDetail = () => {
                                 <table className="min-w-full divide-y divide-gray-200">
                                     <thead className="bg-[#ffdc4d]">
                                         <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                Country
+                                            <th
+                                                className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                onClick={() => handleSortRight('country')}
+                                            >
+                                                <div className="flex items-center">
+                                                    Country
+                                                    <SortIcon columnKey="country" sortConfig={sortConfigRight} />
+                                                </div>
                                             </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                Population (Millions)
+                                            <th
+                                                className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                onClick={() => handleSortRight('population')}
+                                            >
+                                                <div className="flex items-center">
+                                                    Population (Millions)
+                                                    <SortIcon columnKey="population" sortConfig={sortConfigRight} />
+                                                </div>
                                             </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider">
-                                                Percentage of World Population
+                                            <th
+                                                className="px-6 py-3 text-left text-xs font-medium text-black uppercase tracking-wider cursor-pointer hover:bg-[#ffd633] transition-colors"
+                                                onClick={() => handleSortRight('percentage')}
+                                            >
+                                                <div className="flex items-center">
+                                                    Percentage of World Population
+                                                    <SortIcon columnKey="percentage" sortConfig={sortConfigRight} />
+                                                </div>
                                             </th>
                                         </tr>
                                     </thead>
@@ -476,7 +623,7 @@ const CountryDetail = () => {
                                 currentPage={currentPageRight}
                                 totalPages={totalPagesRight}
                                 onPageChange={setCurrentPageRight}
-                                totalEntries={filteredRightData.length}
+                                totalEntries={sortedRightData.length}
                             />
                         </div>
                     </div>
